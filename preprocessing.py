@@ -1,17 +1,26 @@
 import os
 import pandas as pd
+import numpy as np
 import matplotlib.pyplot as plt
-import mplcursors
+from datetime import datetime
 from tqdm import tqdm
 
+COLUMNS_OLD = ["TIME","BIKE STANDS","AVAILABLE BIKE STANDS","AVAILABLE BIKES"]
+COLUMNS_NEW = ["TIME","BIKE_STANDS","AVAILABLE_BIKE_STANDS","AVAILABLE_BIKES"]
+
+# Split a file into 2 dataframes along the split_regex
 def split_df(filename: str, split_regex: str) -> (pd.DataFrame, pd.DataFrame):
-    df = pd.read_csv(filename)
+    if "Q" in filename:
+        df = pd.read_csv(filename, usecols=COLUMNS_OLD)
+        df.rename(columns={"BIKE STANDS": "BIKE_STANDS", 'AVAILABLE BIKE STANDS': 'AVAILABLE_BIKE_STANDS', 'AVAILABLE BIKES': 'AVAILABLE_BIKES'}, inplace=True)
+    else:
+        df = pd.read_csv(filename, usecols=COLUMNS_NEW)
+
     index = df[df["TIME"].str.contains(split_regex)].index[0]
-    print(index)
     return df[:index], df[index:]
 
 # Read all data from a folder and return it in a dataframe
-def read_data(folder: str) -> dict[str, pd.DataFrame]:
+def read_data(folder: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
     dfs = {}
 
     # Split March 2020 into pre and post pandemic
@@ -25,33 +34,61 @@ def read_data(folder: str) -> dict[str, pd.DataFrame]:
     for time_period in ["pre-pandemic", "pandemic", "post-pandemic"]:
         period_df = []
         for subdir, _, files in os.walk(f"{folder}/{time_period}"):
-            for file in files:
-                df = pd.read_csv(os.path.join(subdir, file))
+            for file in tqdm(files, desc=f"Reading {subdir}"):
+                if "Q" in file:
+                    df = pd.read_csv(os.path.join(subdir, file), usecols=COLUMNS_OLD)
+                    df.rename(columns={"BIKE STANDS": "BIKE_STANDS", 'AVAILABLE BIKE STANDS': 'AVAILABLE_BIKE_STANDS', 'AVAILABLE BIKES': 'AVAILABLE_BIKES'}, inplace=True)
+                else:
+                    df = pd.read_csv(os.path.join(subdir, file), usecols=COLUMNS_NEW)
                 period_df.append(df)
                 del df
         
-        match time_period:
-            case "pre-pandemic":
-                period_df.append(pre_pandemic_mar)
-                del pre_pandemic_mar
-            case "pandemic":
-                period_df.insert(0,pandemic_mar)
-                period_df.append(pandemic_jan)
-                del pandemic_mar
-                del pandemic_jan
-            case "post-pandemic":
-                period_df.insert(0,post_pandemic_jan)
-                del post_pandemic_jan
+            match time_period:
+                case "pre-pandemic":
+                    period_df.append(pre_pandemic_mar)
+                    del pre_pandemic_mar
+                case "pandemic":
+                    period_df.insert(0,pandemic_mar)
+                    period_df.append(pandemic_jan)
+                    del pandemic_mar
+                    del pandemic_jan
+                case "post-pandemic":
+                    period_df.insert(0,post_pandemic_jan)
+                    del post_pandemic_jan
             
         dfs[time_period] = pd.concat(period_df, ignore_index=True)
         
-    return dfs
+    return dfs["pre-pandemic"], dfs["pandemic"], dfs["post-pandemic"]
+
+# Round a time string to the nearest 5 minutes in a datetime object
+def round_to_5_minutes(time: str) -> datetime:
+    # Parse the input string into a datetime object
+    dt_format = "%Y-%m-%d %H:%M:%S"
+    dt = datetime.strptime(time, dt_format)
+
+    # Round down to the nearest 5 minutes
+    rounded_dt = datetime(dt.year, dt.month, dt.day, dt.hour, (dt.minute // 5) * 5)
+
+    return rounded_dt
+
+# Combine time/dates of different stations into one value per time
+def combine_dates(df: pd.DataFrame, period: str) -> pd.DataFrame:
+    # Translate into Unix timestamp in seconds
+    #t_full=pd.array(pd.DatetimeIndex(df.iloc[:,0]).astype(np.int64))/1000000000
+    #dt = t_full[1] - t_full[0]
+    #print("Data sampling interval is %d secs"%dt)
+
+    # Round times to nearest 5 minutes
+    tqdm.pandas(desc=f"Rounding {period} times to closest 5 minutes.")
+    df['TIME'] = df['TIME'].progress_apply(round_to_5_minutes)
+
+    # Aggregate times together, with all counts summed
+    return df.groupby(df['TIME']).aggregate({'BIKE_STANDS': 'sum', 'AVAILABLE_BIKE_STANDS': 'sum', 'AVAILABLE_BIKES': 'sum'})
 
 def main():
-    data = read_data("data")
-    
-    print("Pre-Pandemic Data:")
-    print(data["pre-pandemic"].head())
+    pre_pandemic, pandemic, post_pandemic = read_data("data")
+    pre_pandemic, pandemic, post_pandemic = combine_dates(pre_pandemic, "pre-pandemic"), combine_dates(pandemic, "pandemic"), combine_dates(post_pandemic, "post-pandemic")
+    print(pre_pandemic)
 
 if __name__ == "__main__":
     main()
