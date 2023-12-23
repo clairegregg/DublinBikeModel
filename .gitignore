@@ -1,6 +1,6 @@
 # Data files which are too big to push
 data/pre-pandemic/
-data/pandemic/2020Q1.csv
+data/start-pandemic/2020Q1.csv
 data/pandemic/2020Q2.csv
 data/pandemic/2020Q3.csv
 data/pandemic/2020Q4.csv
