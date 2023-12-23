@@ -73,22 +73,24 @@ def round_to_5_minutes(time: str) -> datetime:
 
 # Combine time/dates of different stations into one value per time
 def combine_dates(df: pd.DataFrame, period: str) -> pd.DataFrame:
-    # Translate into Unix timestamp in seconds
-    #t_full=pd.array(pd.DatetimeIndex(df.iloc[:,0]).astype(np.int64))/1000000000
-    #dt = t_full[1] - t_full[0]
-    #print("Data sampling interval is %d secs"%dt)
-
     # Round times to nearest 5 minutes
     tqdm.pandas(desc=f"Rounding {period} times to closest 5 minutes.")
     df['TIME'] = df['TIME'].progress_apply(round_to_5_minutes)
 
     # Aggregate times together, with all counts summed
-    return df.groupby(df['TIME']).aggregate({'BIKE_STANDS': 'sum', 'AVAILABLE_BIKE_STANDS': 'sum', 'AVAILABLE_BIKES': 'sum'})
+    return df.groupby(df['TIME'], as_index=False).aggregate({'BIKE_STANDS': 'sum', 'AVAILABLE_BIKE_STANDS': 'sum', 'AVAILABLE_BIKES': 'sum'})
+
+def plot_period(df: pd.DataFrame, period: str):
+    plt.plot(df['TIME'], df['AVAILABLE_BIKE_STANDS'])
+    plt.title(f"Available bikes in the {period} period")
+    plt.xlabel("Time/Date")
+    plt.ylabel("Number of available bikes")
+    plt.show()
 
 def main():
     pre_pandemic, pandemic, post_pandemic = read_data("data")
     pre_pandemic, pandemic, post_pandemic = combine_dates(pre_pandemic, "pre-pandemic"), combine_dates(pandemic, "pandemic"), combine_dates(post_pandemic, "post-pandemic")
-    print(pre_pandemic)
+    plot_period(pre_pandemic, "pre-pandemic")
 
 if __name__ == "__main__":
     main()
