@@ -80,17 +80,27 @@ def combine_dates(df: pd.DataFrame, period: str) -> pd.DataFrame:
     # Aggregate times together, with all counts summed
     return df.groupby(df['TIME'], as_index=False).aggregate({'BIKE_STANDS': 'sum', 'AVAILABLE_BIKE_STANDS': 'sum', 'AVAILABLE_BIKES': 'sum'})
 
-def plot_period(df: pd.DataFrame, period: str):
+def plot_period_bike_availability(df: pd.DataFrame, period: str):
     plt.plot(df['TIME'], df['AVAILABLE_BIKE_STANDS'])
     plt.title(f"Available bikes in the {period} period")
     plt.xlabel("Time/Date")
     plt.ylabel("Number of available bikes")
     plt.show()
 
+def plot_all_stand_availability(pre_pandemic_df: pd.DataFrame, pandemic_df: pd.DataFrame, post_pandemic_df: pd.DataFrame):
+    plt.plot(pre_pandemic_df['TIME'], pre_pandemic_df['AVAILABLE_BIKE_STANDS'], c='blue', label="Pre-pandemic")
+    plt.plot(pandemic_df['TIME'], pandemic_df['AVAILABLE_BIKE_STANDS'], c='green', label="Pandemic")
+    plt.plot(post_pandemic_df['TIME'], post_pandemic_df['AVAILABLE_BIKE_STANDS'], c='red', label="Post-pandemic")
+    plt.xlabel("Time/Date")
+    plt.ylabel("Number of available bikes")
+    plt.title("Number of Available Stations (Bike Usage) - Pre, During, and Post Pandemic")
+    plt.legend()
+    plt.show()
+
 def main():
     pre_pandemic, pandemic, post_pandemic = read_data("data")
     pre_pandemic, pandemic, post_pandemic = combine_dates(pre_pandemic, "pre-pandemic"), combine_dates(pandemic, "pandemic"), combine_dates(post_pandemic, "post-pandemic")
-    plot_period(pre_pandemic, "pre-pandemic")
+    plot_all_stand_availability(pre_pandemic, pandemic, post_pandemic)
 
 if __name__ == "__main__":
     main()
