@@ -1,16 +1,13 @@
 # Data files which are too big to push
-data/2019Q1.csv
-data/2019Q2.csv
-data/2019Q3.csv
-data/2019Q4.csv
-data/2020Q1.csv
-data/2020Q2.csv
-data/2020Q3.csv
-data/2020Q4.csv
-data/2021Q1.csv
-data/2021Q2.csv
-data/2021Q3.csv
-data/2021Q4.csv
+data/pre-pandemic/
+data/pandemic/2020Q1.csv
+data/pandemic/2020Q2.csv
+data/pandemic/2020Q3.csv
+data/pandemic/2020Q4.csv
+data/pandemic/2021Q1.csv
+data/pandemic/2021Q2.csv
+data/pandemic/2021Q3.csv
+data/pandemic/2021Q4.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
