@@ -82,15 +82,41 @@ def combine_dates(df: pd.DataFrame, period: str) -> pd.DataFrame:
 
 def write_combined_dates(df: pd.DataFrame, name: str):
     df = combine_dates(df, name)
-    df.to_csv(f"data/{name}.csv")
+    df.to_csv(f"data/rounded_{name}.csv")
+
+def write_daily_data(df: pd.DataFrame, name: str):
+    df = avg_over_day(df, name)
+    df.to_csv(f"data/daily_{name}.csv")
 
 def write_all_periods_cleaned_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
     write_combined_dates(df1, "pre-pandemic")
     write_combined_dates(df2, "pandemic")
     write_combined_dates(df3, "post-pandemic")
 
+def write_all_periods_daily_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
+    write_daily_data(df1, "pre-pandemic")
+    write_daily_data(df2, "pandemic")
+    write_daily_data(df3, "post-pandemic")
+
+def read_cleaned_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    pre_pandemic = pd.read_csv("data/rounded_pre-pandemic.csv")
+    pandemic = pd.read_csv("data/rounded_pandemic.csv")
+    post_pandemic = pd.read_csv("data/rounded_post-pandemic.csv")
+    return pre_pandemic, pandemic, post_pandemic
+
+def round_to_day(time: str) -> datetime:
+    dt_format = "%Y-%m-%d %H:%M:%S"
+    dt = datetime.strptime(time, dt_format)
+    return datetime(dt.year, dt.month, dt.day, 0, 0, 0)
+
+def avg_over_day(df: pd.DataFrame, period: str) -> pd.DataFrame:
+    tqdm.pandas(desc=f"Rounding {period} times to day.")
+    df['TIME'] = df['TIME'].progress_apply(round_to_day)
+    return df.groupby(df['TIME'], as_index=False).aggregate({'BIKE_STANDS': 'mean', 'AVAILABLE_BIKE_STANDS': 'mean', 'AVAILABLE_BIKES': 'mean'})
+
 def plot_period_bike_availability(df: pd.DataFrame, period: str):
     plt.plot(df['TIME'], df['AVAILABLE_BIKE_STANDS'])
+    plt.grid(True)
     plt.title(f"Available bikes in the {period} period")
     plt.xlabel("Time/Date")
     plt.ylabel("Number of available bikes")
@@ -109,6 +135,8 @@ def plot_all_stand_availability(pre_pandemic_df: pd.DataFrame, pandemic_df: pd.D
 def main():
     pre_pandemic, pandemic, post_pandemic = read_data("data")
     write_all_periods_cleaned_data(pre_pandemic, pandemic, post_pandemic)
+    pre_pandemic, pandemic, post_pandemic = read_cleaned_data()
+    write_all_periods_daily_data(pre_pandemic, pandemic, post_pandemic)
 
 if __name__ == "__main__":
     main()
