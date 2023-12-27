@@ -73,6 +73,7 @@ def round_to_5_minutes(time: str) -> datetime:
 
 # Combine time/dates of different stations into one value per time
 def combine_dates(df: pd.DataFrame, period: str) -> pd.DataFrame:
+    df = df.drop_duplicates()
     # Round times to nearest 5 minutes
     tqdm.pandas(desc=f"Rounding {period} times to closest 5 minutes.")
     df['TIME'] = df['TIME'].progress_apply(round_to_5_minutes)
@@ -114,6 +115,12 @@ def avg_over_day(df: pd.DataFrame, period: str) -> pd.DataFrame:
     df['TIME'] = df['TIME'].progress_apply(round_to_day)
     return df.groupby(df['TIME'], as_index=False).aggregate({'BIKE_STANDS': 'mean', 'AVAILABLE_BIKE_STANDS': 'mean', 'AVAILABLE_BIKES': 'mean'})
 
+def read_daily_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
+    pre_pandemic = pd.read_csv("data/daily_pre-pandemic.csv")
+    pandemic = pd.read_csv("data/daily_pandemic.csv")
+    post_pandemic = pd.read_csv("data/daily_post-pandemic.csv")
+    return pre_pandemic, pandemic, post_pandemic
+
 def plot_period_bike_availability(df: pd.DataFrame, period: str):
     plt.plot(df['TIME'], df['AVAILABLE_BIKE_STANDS'])
     plt.grid(True)
@@ -137,6 +144,8 @@ def main():
     write_all_periods_cleaned_data(pre_pandemic, pandemic, post_pandemic)
     pre_pandemic, pandemic, post_pandemic = read_cleaned_data()
     write_all_periods_daily_data(pre_pandemic, pandemic, post_pandemic)
+    pre_pandemic, pandemic, post_pandemic = read_daily_data()
+    plot_all_stand_availability(pre_pandemic, pandemic, post_pandemic)
 
 if __name__ == "__main__":
     main()
