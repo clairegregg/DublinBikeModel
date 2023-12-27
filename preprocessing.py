@@ -80,6 +80,15 @@ def combine_dates(df: pd.DataFrame, period: str) -> pd.DataFrame:
     # Aggregate times together, with all counts summed
     return df.groupby(df['TIME'], as_index=False).aggregate({'BIKE_STANDS': 'sum', 'AVAILABLE_BIKE_STANDS': 'sum', 'AVAILABLE_BIKES': 'sum'})
 
+def write_combined_dates(df: pd.DataFrame, name: str):
+    df = combine_dates(df, name)
+    df.to_csv(f"data/{name}.csv")
+
+def write_all_periods_cleaned_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
+    write_combined_dates(df1, "pre-pandemic")
+    write_combined_dates(df2, "pandemic")
+    write_combined_dates(df3, "post-pandemic")
+
 def plot_period_bike_availability(df: pd.DataFrame, period: str):
     plt.plot(df['TIME'], df['AVAILABLE_BIKE_STANDS'])
     plt.title(f"Available bikes in the {period} period")
@@ -99,8 +108,7 @@ def plot_all_stand_availability(pre_pandemic_df: pd.DataFrame, pandemic_df: pd.D
 
 def main():
     pre_pandemic, pandemic, post_pandemic = read_data("data")
-    pre_pandemic, pandemic, post_pandemic = combine_dates(pre_pandemic, "pre-pandemic"), combine_dates(pandemic, "pandemic"), combine_dates(post_pandemic, "post-pandemic")
-    plot_all_stand_availability(pre_pandemic, pandemic, post_pandemic)
+    write_all_periods_cleaned_data(pre_pandemic, pandemic, post_pandemic)
 
 if __name__ == "__main__":
     main()
