@@ -8,6 +8,10 @@ from tqdm import tqdm
 COLUMNS_OLD = ["TIME","BIKE STANDS","AVAILABLE BIKE STANDS","AVAILABLE BIKES"]
 COLUMNS_NEW = ["TIME","BIKE_STANDS","AVAILABLE_BIKE_STANDS","AVAILABLE_BIKES"]
 
+#######################
+## READ INITIAL DATA ##
+#######################
+
 # Split a file into 2 dataframes along the split_regex
 def split_df(filename: str, split_regex: str) -> (pd.DataFrame, pd.DataFrame):
     if "Q" in filename:
@@ -60,6 +64,10 @@ def read_data(folder: str) -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
         
     return dfs["pre-pandemic"], dfs["pandemic"], dfs["post-pandemic"]
 
+################
+## CLEAN DATA ##
+################
+
 # Round a time string to the nearest 5 minutes in a datetime object
 def round_to_5_minutes(time: str) -> datetime:
     # Parse the input string into a datetime object
@@ -85,25 +93,20 @@ def write_combined_dates(df: pd.DataFrame, name: str):
     df = combine_dates(df, name)
     df.to_csv(f"data/rounded_{name}.csv")
 
-def write_daily_data(df: pd.DataFrame, name: str):
-    df = avg_over_day(df, name)
-    df.to_csv(f"data/daily_{name}.csv")
-
 def write_all_periods_cleaned_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
     write_combined_dates(df1, "pre-pandemic")
     write_combined_dates(df2, "pandemic")
     write_combined_dates(df3, "post-pandemic")
 
-def write_all_periods_daily_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
-    write_daily_data(df1, "pre-pandemic")
-    write_daily_data(df2, "pandemic")
-    write_daily_data(df3, "post-pandemic")
-
 def read_cleaned_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
-    pre_pandemic = pd.read_csv("data/rounded_pre-pandemic.csv")
-    pandemic = pd.read_csv("data/rounded_pandemic.csv")
-    post_pandemic = pd.read_csv("data/rounded_post-pandemic.csv")
+    pre_pandemic = pd.read_csv("data/rounded_pre-pandemic.csv",parse_dates=['TIME'])
+    pandemic = pd.read_csv("data/rounded_pandemic.csv",parse_dates=['TIME'])
+    post_pandemic = pd.read_csv("data/rounded_post-pandemic.csv",parse_dates=['TIME'])
     return pre_pandemic, pandemic, post_pandemic
+
+#######################
+## AVERAGE OVER DAYS ##
+#######################
 
 def round_to_day(time: str) -> datetime:
     dt_format = "%Y-%m-%d %H:%M:%S"
@@ -115,35 +118,41 @@ def avg_over_day(df: pd.DataFrame, period: str) -> pd.DataFrame:
     df['TIME'] = df['TIME'].progress_apply(round_to_day)
     return df.groupby(df['TIME'], as_index=False).aggregate({'BIKE_STANDS': 'mean', 'AVAILABLE_BIKE_STANDS': 'mean', 'AVAILABLE_BIKES': 'mean'})
 
+def write_daily_data(df: pd.DataFrame, name: str):
+    df = avg_over_day(df, name)
+    df.to_csv(f"data/daily_{name}.csv")
+
+def write_all_periods_daily_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
+    write_daily_data(df1, "pre-pandemic")
+    write_daily_data(df2, "pandemic")
+    write_daily_data(df3, "post-pandemic")
+
 def read_daily_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
-    pre_pandemic = pd.read_csv("data/daily_pre-pandemic.csv")
-    pandemic = pd.read_csv("data/daily_pandemic.csv")
-    post_pandemic = pd.read_csv("data/daily_post-pandemic.csv")
+    pre_pandemic = pd.read_csv("data/daily_pre-pandemic.csv", parse_dates=['TIME'])
+    pandemic = pd.read_csv("data/daily_pandemic.csv", parse_dates=['TIME'])
+    post_pandemic = pd.read_csv("data/daily_post-pandemic.csv", parse_dates=['TIME'])
     return pre_pandemic, pandemic, post_pandemic
 
-def plot_period_bike_availability(df: pd.DataFrame, period: str):
-    plt.plot(df['TIME'], df['AVAILABLE_BIKE_STANDS'])
-    plt.grid(True)
-    plt.title(f"Available bikes in the {period} period")
-    plt.xlabel("Time/Date")
-    plt.ylabel("Number of available bikes")
-    plt.show()
+##########
+## PLOT ##
+##########
 
 def plot_all_stand_availability(pre_pandemic_df: pd.DataFrame, pandemic_df: pd.DataFrame, post_pandemic_df: pd.DataFrame):
     plt.plot(pre_pandemic_df['TIME'], pre_pandemic_df['AVAILABLE_BIKE_STANDS'], c='blue', label="Pre-pandemic")
     plt.plot(pandemic_df['TIME'], pandemic_df['AVAILABLE_BIKE_STANDS'], c='green', label="Pandemic")
     plt.plot(post_pandemic_df['TIME'], post_pandemic_df['AVAILABLE_BIKE_STANDS'], c='red', label="Post-pandemic")
     plt.xlabel("Time/Date")
-    plt.ylabel("Number of available bikes")
+    plt.ylabel("Number of Available Stations")
     plt.title("Number of Available Stations (Bike Usage) - Pre, During, and Post Pandemic")
+    plt.xticks(rotation="vertical")
     plt.legend()
     plt.show()
 
+##########
+## MAIN ##
+##########
+
 def main():
-    pre_pandemic, pandemic, post_pandemic = read_data("data")
-    write_all_periods_cleaned_data(pre_pandemic, pandemic, post_pandemic)
-    pre_pandemic, pandemic, post_pandemic = read_cleaned_data()
-    write_all_periods_daily_data(pre_pandemic, pandemic, post_pandemic)
     pre_pandemic, pandemic, post_pandemic = read_daily_data()
     plot_all_stand_availability(pre_pandemic, pandemic, post_pandemic)
 
