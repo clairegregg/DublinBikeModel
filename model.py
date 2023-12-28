@@ -35,8 +35,10 @@ def q_steps_ahead_pred(q: int, dd: int, lag: int, plot: bool, df: pd.DataFrame, 
         plt.legend()
         plt.show()
 
-def combined_q_steps_ahead_pred(q: int, lag: int, plot: bool, df: pd.DataFrame, test_prop: float, dt: float):
+def combined_q_steps_ahead_pred(q: int, lag: int, plot: bool, df1: pd.DataFrame, df2: pd.DataFrame, test_prop: float, dt: float):
     stride=1
+
+    df = pd.concat([df1,df2])
     
     w = math.floor(4*7*24*60*60/dt)
     t = df['TIME']
@@ -92,7 +94,7 @@ def main():
     t_full=pd.array(pd.DatetimeIndex(pre_pandemic.iloc[:,1]).astype(np.int64))/1000000000
     dt = t_full[1]-t_full[0]
 
-    combined_q_steps_ahead_pred(10, 3, True, pre_pandemic, 0.2, dt)
+    combined_q_steps_ahead_pred(10, 3, True, pre_pandemic, pandemic, 0.2, dt)
 
 if __name__ == "__main__":
     main()
