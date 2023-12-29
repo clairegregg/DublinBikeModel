@@ -22,10 +22,9 @@ def new_lstm_dataset(dataset: [float], look_back: int = 1) -> np.ndarray:
         dataY.append(dataset[i+look_back, 0])
     return np.array(dataX), np.array(dataY)
 
-def test_accuracy_lstm(dataset: [float], train_proportion: float):
+def test_accuracy_lstm(dataset: [float], train_proportion: float, scaler: MinMaxScaler):
     # Setup train test split
     train_size = int(len(dataset) * train_proportion)
-    test_size = len(dataset) - train_size
     train, test = dataset[0:train_size,:], dataset[train_size:len(dataset),:]
 
     # Create features as one time step
@@ -42,8 +41,38 @@ def test_accuracy_lstm(dataset: [float], train_proportion: float):
     model.add(LSTM(4, input_shape=(1, look_back)))
     model.add(Dense(1))
     model.compile(loss='mean_squared_error', optimizer='adam')
+    model.fit(trainX, trainY, epochs=100, batch_size=1, verbose=2)
 
-    return
+    # Make predictions
+    trainPredict = model.predict(trainX)
+    testPredict = model.predict(testX)
+
+    # Invert predictions
+    trainPredict = scaler.inverse_transform(trainPredict)
+    trainY = scaler.inverse_transform([trainY])
+    testPredict = scaler.inverse_transform(testPredict)
+    testY = scaler.inverse_transform([testY])
+
+    # Calculate error
+    trainScore = np.sqrt(mean_squared_error(trainY[0], trainPredict[:,0]))
+    print("Train score: %.2f mean squared error"%(trainScore))
+    testScore = np.sqrt(mean_squared_error(testY[0], testPredict[:,0]))
+    print("Test score: %.2f mean squared error"%(testScore))
+
+    # Shift predictions for plotting
+    trainPredictPlot = np.empty_like(dataset)
+    trainPredictPlot[:,:] = np.nan
+    trainPredictPlot[look_back:len(trainPredict)+look_back, :] = trainPredict
+
+    testPredictPlot = np.empty_like(dataset)
+    testPredictPlot[:,:] = np.nan
+    testPredictPlot[len(testPredict)+(look_back*2)+1:len(dataset)-1,:] = testPredict
+
+    # Plot baseline model and predictions
+    plt.plot(scaler.inverse_transform(dataset))
+    plt.plot(trainPredictPlot)
+    plt.plot(testPredictPlot)
+    plt.show()
 
 def main():
     # Ensure it is reproducable
@@ -60,6 +89,9 @@ def main():
     pre_pandemic = scaler.fit_transform(pre_pandemic_dataset)
     pandemic = scaler.fit_transform(pandemic_dataset)
     post_pandemic = scaler.fit_transform(post_pandemic_dataset)
+
+    # Test LSTM for this problem
+    test_accuracy_lstm(pre_pandemic, 0.2, scaler)
     
 
 if __name__ == "__main__":
