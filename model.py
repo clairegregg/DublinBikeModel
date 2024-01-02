@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
 from sklearn.linear_model import Ridge
 import matplotlib.pyplot as plt
 import math
@@ -44,6 +45,29 @@ def one_step_ahead(y: pd.Series, lag: int, dt: float) -> float:
 
     return model.predict(XX)[-1]
 
+def multi_step_prediction(train: pd.DataFrame, test: pd.DataFrame, lag: int, dt: float, plot: bool, error: bool):
+    y = train.copy()['AVAILABLE_BIKE_STANDS']
+    for _ in range(len(test)):
+        new_y = one_step_ahead(y, lag, dt)
+        y[len(y)] = new_y
+
+    y_pred = y[len(train):]
+    y_true = test['AVAILABLE_BIKE_STANDS']
+
+    if error:
+        mse = mean_squared_error(y_true, y_pred)
+        print(f"This model has a mean squared error of {mse}")
+
+    if plot:
+        full_x = pd.concat([train['TIME'], test['TIME']])
+        full_y = pd.concat([train["AVAILABLE_BIKE_STANDS"], test["AVAILABLE_BIKE_STANDS"]])
+        plt.plot(full_x, full_y, color='black', label="Actual Data")
+        plt.plot(test['TIME'], y_pred, color='blue', label="Predicted")
+        plt.xlabel("Time")
+        plt.ylabel("Bike usage")
+        plt.legend()
+        plt.show()
+
 def read_daily_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
     pre_pandemic = pd.read_csv("data/daily_pre-pandemic.csv", parse_dates=['TIME'])
     pandemic = pd.read_csv("data/daily_pandemic.csv", parse_dates=['TIME'])
@@ -54,22 +78,11 @@ def main():
     pre_pandemic, pandemic, post_pandemic = read_daily_data()
     t_full=pd.array(pd.DatetimeIndex(pre_pandemic.iloc[:,1]).astype(np.int64))/1000000000
     dt = t_full[1]-t_full[0]
-    y = pre_pandemic['AVAILABLE_BIKE_STANDS']
 
-    for _ in range(pandemic.shape[0]):
-        new_y = one_step_ahead(y, 3, dt)
-        y[len(y)] = new_y
-
-    print(len(pandemic['TIME']))
-    print(len(y[pre_pandemic.shape[0]:]))
-    print(len(y))
-    print(pre_pandemic.shape[0])
-    plt.scatter(pd.concat([pre_pandemic['TIME'], pandemic['TIME']]), pd.concat([pre_pandemic["AVAILABLE_BIKE_STANDS"], pandemic["AVAILABLE_BIKE_STANDS"]]), color='black', marker='.', label="Actual Data")
-    plt.scatter(pandemic['TIME'], y[pre_pandemic.shape[0]:], color='blue', marker='.', label="Predicted")
-    plt.xlabel("Time")
-    plt.ylabel("Bike usage")
-    plt.legend()
-    plt.show()
+    train_size = math.floor(0.8*(pre_pandemic.shape[0]))
+    train, test = pre_pandemic[0:train_size], pre_pandemic[train_size:]
+    
+    multi_step_prediction(train, test, 3, dt, True, True)
 
 if __name__ == "__main__":
     main()
