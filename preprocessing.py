@@ -89,15 +89,18 @@ def combine_dates(df: pd.DataFrame, period: str) -> pd.DataFrame:
     # Aggregate times together, with all counts summed
     return df.groupby(df['TIME'], as_index=False).aggregate({'BIKE_STANDS': 'sum', 'AVAILABLE_BIKE_STANDS': 'sum', 'AVAILABLE_BIKES': 'sum'})
 
+# Write data for dataframe to a csv
 def write_combined_dates(df: pd.DataFrame, name: str):
     df = combine_dates(df, name)
     df.to_csv(f"data/rounded_{name}.csv")
 
+# Write data for all periods to csvs
 def write_all_periods_cleaned_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
     write_combined_dates(df1, "pre-pandemic")
     write_combined_dates(df2, "pandemic")
     write_combined_dates(df3, "post-pandemic")
 
+# Read cleaned data for all periods into dataframes
 def read_cleaned_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
     pre_pandemic = pd.read_csv("data/rounded_pre-pandemic.csv",parse_dates=['TIME'])
     pandemic = pd.read_csv("data/rounded_pandemic.csv",parse_dates=['TIME'])
@@ -107,26 +110,30 @@ def read_cleaned_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
 #######################
 ## AVERAGE OVER DAYS ##
 #######################
-
+# Given a datetime in a string, convert it to datetime containing just the date
 def round_to_day(time: str) -> datetime:
     dt_format = "%Y-%m-%d %H:%M:%S"
     dt = datetime.strptime(time, dt_format)
     return datetime(dt.year, dt.month, dt.day, 0, 0, 0)
 
+# Average all bike usage values in a dataframe over each day
 def avg_over_day(df: pd.DataFrame, period: str) -> pd.DataFrame:
     tqdm.pandas(desc=f"Rounding {period} times to day.")
     df['TIME'] = df['TIME'].progress_apply(round_to_day)
     return df.groupby(df['TIME'], as_index=False).aggregate({'BIKE_STANDS': 'mean', 'AVAILABLE_BIKE_STANDS': 'mean', 'AVAILABLE_BIKES': 'mean'})
 
+# Write the daily average data for a dataframe to a csv
 def write_daily_data(df: pd.DataFrame, name: str):
     df = avg_over_day(df, name)
     df.to_csv(f"data/daily_{name}.csv")
 
+# Write daily averages for all periods to csvs
 def write_all_periods_daily_data(df1: pd.DataFrame, df2: pd.DataFrame, df3: pd.DataFrame):
     write_daily_data(df1, "pre-pandemic")
     write_daily_data(df2, "pandemic")
     write_daily_data(df3, "post-pandemic")
 
+# Read daily averages for all periods to dataframes
 def read_daily_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
     pre_pandemic = pd.read_csv("data/daily_pre-pandemic.csv", parse_dates=['TIME'])
     pandemic = pd.read_csv("data/daily_pandemic.csv", parse_dates=['TIME'])
@@ -137,6 +144,7 @@ def read_daily_data() -> (pd.DataFrame, pd.DataFrame, pd.DataFrame):
 ## PLOT ##
 ##########
 
+# Given bike usage dataframes, plot them
 def plot_all_stand_availability(pre_pandemic_df: pd.DataFrame, pandemic_df: pd.DataFrame, post_pandemic_df: pd.DataFrame):
     plt.plot(pre_pandemic_df['TIME'], pre_pandemic_df['AVAILABLE_BIKE_STANDS'], c='blue', label="Pre-pandemic")
     plt.plot(pandemic_df['TIME'], pandemic_df['AVAILABLE_BIKE_STANDS'], c='green', label="Pandemic")
